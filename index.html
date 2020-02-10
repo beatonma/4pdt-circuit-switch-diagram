@@ -1,0 +1,57 @@
+<html>
+<head>
+    <style>
+        :root {
+            --width: 800px;
+            --height: 600px;
+
+            --green: #16b06bff;
+            --blue: #0e70b8ff;
+            --red: #ee4545ff;
+            --grey: #636363ff;
+
+            --text-light-primary: hsla(0,0%,100%,.83);
+            --text-light-secondary: hsla(0,0%,100%,.54);
+            --text-light-tertiary: hsla(0,0%,100%,.25);
+            --text-dark-primary: rgba(0,0,0,.83);
+            --text-dark-secondary: rgba(0,0,0,.54);
+            --text-dark-tertiary: rgba(0,0,0,.25);
+            --text-primary: var(--text-dark-primary);
+            --text-secondary: var(--text-dark-secondary);
+            --text-tertiary: var(--text-dark-tertiary);
+            --text-primary-invert: var(--text-light-primary);
+            --text-secondary-invert: var(--text-light-secondary);
+            --text-tertiary-invert: var(--text-light-tertiary);
+            --primary-color: var(--text-primary);
+            --item-primary: var(--primary-color);
+        }
+        #fourpdt_diagram {
+            width: var(--width);
+            height: var(--height);
+        }
+        #fourpdt_diagram_canvas {
+            background-color: #dddddd;
+        }
+        .row {
+            width: var(--width);
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+            margin-bottom:64px;
+        }
+        .terminal {
+            width: 32px;
+            height: 32px;
+            background-color: green;
+        }
+    </style>
+</head>
+<body>
+    <div id="fourpdt_diagram">
+        <canvas id="fourpdt_diagram_canvas" width="800" height="600"></canvas>
+    </div>
+
+
+    <script src="4pdt-diagram.js" type="text/javascript" ></script>
+</body>
+</html>
