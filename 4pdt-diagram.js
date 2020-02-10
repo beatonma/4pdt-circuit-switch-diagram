@@ -22,7 +22,6 @@ const fourpdt = (() => {
 
     ctx.lineWidth = lineWidth;
     ctx.font = `${terminalRadius * .9}px Arial`;
-    console.log(ctx.font);
 
     const externalConnectionColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
     const switchConnectionColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
@@ -44,8 +43,8 @@ const fourpdt = (() => {
             this.label = '';
         }
 
-        connect(connections) {
-            this.temporaryConnections = connections;
+        addTemporaryConnection(connection) {
+            this.temporaryConnections.push(connection);
         }
 
         setPermanentConnections(connections) {
@@ -87,31 +86,45 @@ const fourpdt = (() => {
                 this.terminals[i].label = '' + (i + 1);
             }
 
-            this.setColor([0, 4, 10, 11], green);
-            this.setColor([2, 3, 5, 9], blue);
-            this.setColor([6, 7], red);
+            this.setColor([0, 4, 9, 10], green);
+            this.setColor([1, 2, 7, 11], blue);
+            this.setColor([5, 6], red);
 
             // Green
-            this.terminals[0].setPermanentConnections([10]);
-            this.terminals[4].setPermanentConnections([11])
+            this.terminals[0].setPermanentConnections([9]);
+            this.terminals[4].setPermanentConnections([10])
 
             // Blue
-            this.terminals[2].setPermanentConnections([9]);
-            this.terminals[3].setPermanentConnections([5])
+            this.terminals[1].setPermanentConnections([11]);
+            this.terminals[2].setPermanentConnections([7])
 
             // External connections
-            this.terminals[2].externalConnection = EXTERNAL_CONNECTIONS.MAIN_IN;
-            this.terminals[3].externalConnection = EXTERNAL_CONNECTIONS.MAIN_OUT;
+            this.terminals[1].externalConnection = EXTERNAL_CONNECTIONS.MAIN_IN;
+            this.terminals[2].externalConnection = EXTERNAL_CONNECTIONS.MAIN_OUT;
 
-            this.terminals[10].externalConnection = EXTERNAL_CONNECTIONS.RUBBERNECK_IN;
-            this.terminals[11].externalConnection = EXTERNAL_CONNECTIONS.RUBBERNECK_OUT;
+            this.terminals[9].externalConnection = EXTERNAL_CONNECTIONS.RUBBERNECK_IN;
+            this.terminals[10].externalConnection = EXTERNAL_CONNECTIONS.RUBBERNECK_OUT;
 
-            this.terminals[6].externalConnection = EXTERNAL_CONNECTIONS.FX_SEND;
-            this.terminals[7].externalConnection = EXTERNAL_CONNECTIONS.FX_RETURN;
+            this.terminals[5].externalConnection = EXTERNAL_CONNECTIONS.FX_SEND;
+            this.terminals[6].externalConnection = EXTERNAL_CONNECTIONS.FX_RETURN;
         }
 
         toggle() {
             this.switchPosition = !this.switchPosition;
+
+            this.terminals.forEach(terminal => terminal.temporaryConnections = []);
+
+            if (this.switchPosition) {
+                [0, 1, 2, 3].forEach(position => {
+                    this.addTemporaryConnection(position, position + 4);
+                });
+            }
+            else {
+                [4, 5, 6, 7].forEach(position => {
+                    this.addTemporaryConnection(position, position + 4);
+                });
+            }
+
             this.draw();
         }
 
@@ -136,6 +149,11 @@ const fourpdt = (() => {
             }
         }
 
+        addTemporaryConnection(first, second) {
+            this.terminals[first].addTemporaryConnection(second);
+            this.terminals[second].addTemporaryConnection(first);
+        }
+
         drawConnections() {
             this.terminals.forEach(terminal => {
                 const permanentConnections = terminal.permanentConnections;
@@ -148,19 +166,12 @@ const fourpdt = (() => {
         }
 
         drawSwitchConnections() {
-            const lineFunc = ((position) => {
-                const terminal = this.terminals[position];
-                const other = this.terminals[position + 4];
-
-                drawLine(terminal.x, terminal.y, other.x, other.y, switchConnectionColor);
-            });
-
-            if (this.switchPosition) {
-                [0, 1, 2, 3].forEach(lineFunc);
-            }
-            else {
-                [4, 5, 6, 7].forEach(lineFunc);
-            }
+            this.terminals.forEach(terminal => {
+                terminal.temporaryConnections.forEach(connection => {
+                    const other = this.terminals[connection];
+                    drawLine(terminal.x, terminal.y, other.x, other.y, switchConnectionColor);
+                });
+            });            
         }
     }
 
@@ -185,7 +196,10 @@ const fourpdt = (() => {
     }
 
     const _switch = new FourPDTSwitch();
-    draw();
+    toggle();
+
+    document.getElementById('fourpdt_toggle').addEventListener('click', toggle);
+    // draw();
 
     return {
         draw: draw,
