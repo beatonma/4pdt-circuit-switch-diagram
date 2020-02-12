@@ -1,36 +1,38 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111111">
 <head>
     <style>
-        :root {
-            /* --width: 800px;
-            --height: 600px; */
+:root {
+    --green: #16b06bff;
+    --blue: #0e70b8ff;
+    --red: #ee4545ff;
+    --grey: #636363ff;
+    --white: #ffffffff;
+    --black: #000000ff;
 
-            --green: #16b06bff;
-            --blue: #0e70b8ff;
-            --red: #ee4545ff;
-            --grey: #636363ff;
-            --bright-green: #00ff8dff;
-            --bright-blue: #0093ffff;
-
-            --text-light-primary: hsla(0,0%,100%,.83);
-            --text-light-secondary: hsla(0,0%,100%,.54);
-            --text-light-tertiary: hsla(0,0%,100%,.25);
-            --text-dark-primary: rgba(0,0,0,.83);
-            --text-dark-secondary: rgba(0,0,0,.54);
-            --text-dark-tertiary: rgba(0,0,0,.25);
-            --text-primary: var(--text-dark-primary);
-            --text-secondary: var(--text-dark-secondary);
-            --text-tertiary: var(--text-dark-tertiary);
-            --text-primary-invert: var(--text-light-primary);
-            --text-secondary-invert: var(--text-light-secondary);
-            --text-tertiary-invert: var(--text-light-tertiary);
-            --overlay: var(--text-dark-secondary);
-            --primary-color: var(--text-primary);
-            --item-primary: var(--primary-color);
-        }
+    --text-light-primary: hsla(0,0%,100%,.83);
+    --text-light-secondary: rgba(150, 83, 83, 0.54);
+    --text-light-tertiary: hsla(0,0%,100%,.25);
+    --text-dark-primary: rgba(0,0,0,.83);
+    --text-dark-secondary: rgba(0,0,0,.54);
+    --text-dark-tertiary: rgba(0,0,0,.25);
+    --text-primary: var(--text-dark-primary);
+    --text-secondary: var(--text-dark-secondary);
+    --text-tertiary: var(--text-dark-tertiary);
+    --text-primary-invert: var(--text-light-primary);
+    --text-secondary-invert: var(--text-light-secondary);
+    --text-tertiary-invert: var(--text-light-tertiary);
+    --overlay: var(--text-dark-secondary);
+    --primary-color: var(--text-primary);
+    --item-primary: var(--primary-color);
+}
         body {
-            background-color: #111111;
-            color: #eeeeee;
+            /* background-color: #111111; */
+            /* color: #eeeeee; */
         }
         section {
             margin-top: 64px;
@@ -41,10 +43,11 @@
             flex-direction: row;
         }
         canvas {
-            width: 400px;
+            width: 100%;
+            /* width: 400px;
             height: 320px;
             max-width: 400px;
-            max-height: 320px;
+            max-height: 320px; */
             margin-left: auto;
             margin-right: auto;
         }
@@ -73,12 +76,12 @@
 <body>
     <div id="single_switch_canvas_wrapper" class="canvas-wrapper">
         <canvas id="single_switch_canvas" width="400" height="320"></canvas>
-        <div id="single_switch_label"></div>
+        <p><div id="single_switch_label">Hover over a terminal for more information.</div></p>
         <div id="single_switch_controls">
-            <div id="single_switch_toggle_switch" class="switch-control-button">Toggle switch</div>
-            <div id="single_switch_show_signal_path" class="switch-control-button">Show signal path</div>
-            <div id="single_switch_show_wires" class="switch-control-button">Show connections</div>
             <div id="single_switch_show_terminals" class="switch-control-button">Terminals only</div>
+            <div id="single_switch_show_wires" class="switch-control-button">Show connections</div>
+            <div id="single_switch_show_signal_path" class="switch-control-button">Show signal path</div>
+            <div id="single_switch_toggle_switch" class="switch-control-button">Toggle switch</div>
         </div>
     </div>
 

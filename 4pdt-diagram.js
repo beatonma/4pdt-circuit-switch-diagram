@@ -206,15 +206,15 @@ const switch_renderer = (() => {
     const TAU = Math.PI * 2;
 
     const COLORS = {
-        LABEL: getCssVariable('--text-light-primary'),
-        EXTERNAL_TERMINAL: getCssVariable('--text-primary'),
-        EXTERNAL_CONNECTION: getCssVariable('--text-primary-invert'),
-        SWITCH_CONNECTION: getCssVariable('--text-secondary'),
+        LABEL: getCssVariable('--white'),
+        EXTERNAL_TERMINAL: getCssVariable('--black'),
+        EXTERNAL_CONNECTION: getCssVariable('--white'),
+        SWITCH_CONNECTION: getCssVariable('--grey'),
         GREY: getCssVariable('--grey'),
         MAIN_IO: getCssVariable('--green'),
         RUBBERNECK_IO: getCssVariable('--blue'),
         FX_LOOP: getCssVariable('--red'),
-        OVERLAY: getCssVariable('--overlay'),
+        OVERLAY: getCssVariable('--black'),
     };
 
     const TERMINAL_COLORS = {
@@ -245,12 +245,16 @@ const switch_renderer = (() => {
 
     function rescale() {
         canvasWidth = canvas.clientWidth;
-        canvasHeight = canvas.clientHeight;
+        canvasHeight = canvasWidth * .8;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
         terminalSpacing = canvasWidth / 5;
         terminalRadius = terminalSpacing / 4;
         lineWidth = terminalRadius / 5;
         arrowSize = lineWidth * 3;
         fontSize = terminalRadius;
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.lineWidth = lineWidth;
     }
 
     class TerminalRenderer {
@@ -316,6 +320,22 @@ const switch_renderer = (() => {
         }
 
         draw() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // ctx.strokeStyle = '#000000';
+            // for (var w = 0; w < canvasWidth; w += 10) {
+            //     ctx.beginPath();
+            //     ctx.moveTo(w, 0);
+            //     ctx.lineTo(w, canvasHeight);
+            //     ctx.stroke();
+            // }
+            // for (var h = 0; h < canvasHeight; h += 10) {
+            //     ctx.beginPath();
+            //     ctx.moveTo(0, h);
+            //     ctx.lineTo(canvasWidth, h);
+            //     ctx.stroke();
+            // }
+
             this.applyTerminalColors();
             if (this.shouldRender(RENDER_LAYERS.SIGNAL) || this.shouldRender(RENDER_LAYERS.INTERNAL_WIRES)) {
                 this.switch.signalPaths.forEach(path => {
@@ -326,7 +346,6 @@ const switch_renderer = (() => {
                 });
             }
 
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
             if (this.shouldRender(RENDER_LAYERS.SWITCH)) {
                 this.drawSwitchConnections();
@@ -471,7 +490,7 @@ const switch_renderer = (() => {
         }
 
         showTerminalInfo(terminal) {
-            var message = `<h3>Pin ${terminal.label}</h3>`;
+            var message = `<h3>Terminal ${terminal.label}</h3>`;
             if (terminal.externalConnection != null) {
                 message = `${message}${EXTERNAL_ABOUT[terminal.externalConnection]}<br/>`;
             }
@@ -496,9 +515,10 @@ const switch_renderer = (() => {
     }
 
     function drawArrowWithOutline(startX, startY, endX, endY, color) {
+        const subline = indentLine(startX, startY, endX, endY, 0, arrowSize / 2);
         ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
+        ctx.moveTo(subline[0], subline[1]);
+        ctx.lineTo(subline[2], subline[3]);
         ctx.fillStyle = ctx.strokeStyle = COLORS.OVERLAY;
         ctx.lineWidth = lineWidth * 2;
         ctx.stroke();
@@ -687,6 +707,7 @@ const singleSwitch = (() => {
 
     rescale();
     toggle();
+    // showTerminals();
 
     return renderer;
 })();
