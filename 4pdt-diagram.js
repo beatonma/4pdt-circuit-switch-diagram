@@ -1,5 +1,4 @@
 const switches = (() => {
-
     // External connections to jacks
     const EXTERNAL = {
         FX_SEND: 'fx_send',
@@ -8,6 +7,15 @@ const switches = (() => {
         MAIN_OUT: 'main_out',
         RUBBERNECK_IN: 'rubberneck_in', // Send from Rubberneck
         RUBBERNECK_OUT: 'rubberneck_out', // Return to Rubberneck
+    };
+
+    const EXTERNAL_ABOUT = {
+        'fx_send': 'FX SEND: send signal to pedals in our effects loop.',
+        'fx_return': 'FX RETURN: receive signal from pedals in our effects loop.',
+        'main_in': 'Main IN: connected to pedals that come before the switch.',
+        'main_out': 'Main OUT: connected to pedals that come after the switch.',
+        'rubberneck_in': 'Rubberneck IN: receive signal from Rubberneck SEND.', // Send from Rubberneck
+        'rubberneck_out': 'Rubberneck OUT: return signal to Rubberneck RETURN.', // Return to Rubberneck
     };
 
     const RENDER_LAYERS = {
@@ -20,48 +28,25 @@ const switches = (() => {
         SIGNAL: 'signal', // Show the signal path through the circuit for the current switch state
     };
 
-    const TAU = Math.PI * 2;
+    const canvas = document.getElementById("single_switch_canvas");
+    const infoLabel = document.getElementById("single_switch_label");
 
-    const baseWidth = 800;
-    const baseHeight = 600;
+    function pairwise(list) {
+        var output = [];
+        for (var i = 0; i < list.length - 1; i++) {
+            output.push([list[i], list[i + 1]]);
+        }
+        return output;
+    }
 
-    const canvasWrapper = document.getElementById('fourpdt_diagram');
-    const canvas = document.getElementById("fourpdt_diagram_canvas");
-    const ctx = canvas.getContext("2d");
-
-    const terminalRadius = 20;
-    const terminalSpacing = terminalRadius * 4;
-    const lineWidth = terminalRadius / 5;
-
-    const fontSize = terminalRadius;
-
-    ctx.lineWidth = lineWidth;
-    ctx.font = `${fontSize}px sans-serif`;
-
-    const COLORS = {
-        LABEL: getCssVariable('--text-light-primary'),
-        EXTERNAL_CONNECTION: getCssVariable('--text-primary'),
-        SWITCH_CONNECTION: getCssVariable('--text-secondary'),
-        GREEN: getCssVariable('--green'),
-        BLUE: getCssVariable('--blue'),
-        RED: getCssVariable('--red'),
-        GREY: getCssVariable('--grey'),
-        OVERLAY: getCssVariable('--overlay'),
-        SIGNAL_GREEN: getCssVariable('--bright-green'),
-        SIGNAL_BLUE: getCssVariable('--bright-blue'),
-    };
-
+const switch_models = (() => {
     class Terminal {
-        constructor(x, y, id) {
-            this.x = x;
-            this.y = y;
+        constructor(id) {
             this.temporaryConnections = []; // Volatile connections made by flicking the switch
             this.permanentConnections = []; // Soldered wire connections
-            this.color = COLORS.GREY;
             this.externalConnection = null;
             this.id = id;
-            this.label = `${id}`;
-            this.focussed = false; // Mouse hovering over
+            this.label = `${id + 1}`;
         }
 
         addTemporaryConnection(connection) {
@@ -75,27 +60,15 @@ const switches = (() => {
 
     class FourPDTSwitch {
         constructor() {
-            this.renderLayers = [
-                RENDER_LAYERS.TERMINALS,
-                RENDER_LAYERS.EXTERNAL_WIRES,
-                RENDER_LAYERS.SWITCH,
-                RENDER_LAYERS.INTERNAL_WIRES,
-                RENDER_LAYERS.SIGNAL,
-                RENDER_LAYERS.TERMINAL_LABELS,
-                RENDER_LAYERS.CONNECTION_LABELS,
-            ];
             this.switchPosition = false;
 
             this.terminals = [];
             for (var id = 0; id < 12; id++) {
                 this.terminals.push(
-                    new Terminal(
-                        (id % 4) * terminalSpacing + terminalSpacing,
-                        Math.floor(id / 4) * terminalSpacing + terminalSpacing,
-                        id,
-                    )
+                    new Terminal(id)
                 );
             }
+            this.signalPaths = [];
         }
 
         addTemporaryConnection(first, second) {
@@ -125,125 +98,14 @@ const switches = (() => {
             }
 
             this.updateSignalPaths();
-            this.draw();
-        }
-
-        setColor(terminalList, color) {
-            terminalList.forEach(terminal => {
-                this.terminals[terminal].color = color;
-            });
-        }
-
-        draw() {
-            ctx.clearRect(0, 0, baseWidth, baseHeight);
-
-            if (this.shouldRender(RENDER_LAYERS.SWITCH)) {
-                this.drawSwitchConnections();
-            }
-
-            if (this.shouldRender(RENDER_LAYERS.TERMINALS)) {
-                this.drawTerminals();
-            }
-
-            if (this.shouldRender(RENDER_LAYERS.INTERNAL_WIRES)) {
-                this.drawConnections();
-            }
-
-            if (this.shouldRender(RENDER_LAYERS.SIGNAL)) {
-                this.drawSignal();
-            }
-
-            if (this.shouldRender(RENDER_LAYERS.TERMINAL_LABELS)) {
-                this.drawTerminalLabels();
-            }
-        }
-
-        shouldRender(layer) {
-            return this.renderLayers.includes(layer);
-        }
-
-        drawTerminals() {
-            this.terminals.forEach(terminal => {
-                if (terminal.externalConnection) {
-                    ctx.lineWidth = lineWidth * 2;
-                    strokeCircle(terminal.x, terminal.y, terminalRadius, COLORS.EXTERNAL_CONNECTION);
-                    ctx.lineWidth = lineWidth;
-                }
-
-                fillCircle(terminal.x, terminal.y, terminalRadius, terminal.color);
-
-                if (terminal.focussed) {
-                    fillCircle(terminal.x, terminal.y, terminalRadius / 3, COLORS.LABEL);
-                }
-            });
-        }
-
-        drawConnections() {
-            this.terminals.forEach(terminal => {
-                // Don't render line that goes through fx loop.
-                if ([
-                    EXTERNAL.FX_SEND,
-                    EXTERNAL.FX_RETURN,
-                ].includes(terminal.externalConnection)) {
-                    return;
-                }
-
-                const permanentConnections = terminal.permanentConnections;
-                permanentConnections.forEach(connection => {
-                    const other = this.terminals[connection];
-                    drawLine(terminal.x, terminal.y, other.x, other.y, terminal.color);
-                });
-            });
-        }
-
-        drawSwitchConnections() {
-            this.terminals.forEach(terminal => {
-                terminal.temporaryConnections.forEach(connection => {
-                    const other = this.terminals[connection];
-                    drawLine(terminal.x, terminal.y, other.x, other.y, COLORS.SWITCH_CONNECTION);
-                });
-            });
-        }
-
-        drawTerminalLabels() {
-            this.terminals.forEach(terminal => {
-                const metrics = ctx.measureText(terminal.label);
-                const left = terminal.x - (metrics.width / 2);
-                const baseline = terminal.y + (fontSize / 3);
-
-                fillCircle(terminal.x, terminal.y, terminalRadius * .66, COLORS.OVERLAY);
-
-                ctx.fillStyle = COLORS.LABEL;
-                ctx.fillText(terminal.label, left, baseline);
-            })
-        }
-
-        drawSignal() {
-            const greenPairs = pairwise(this.greenSignalPath);
-            greenPairs.forEach(pair => {
-                const first = this.terminals[pair[0]];
-                const second = this.terminals[pair[1]];
-                drawArrowWithOutline(first.x, first.y, second.x, second.y, COLORS.SIGNAL_GREEN);
-            });
-
-            const bluePairs = pairwise(this.blueSignalPath);
-            bluePairs.forEach(pair => {
-                const first = this.terminals[pair[0]];
-                const second = this.terminals[pair[1]];
-                drawArrowWithOutline(first.x, first.y, second.x, second.y, COLORS.SIGNAL_BLUE);
-            });
-        }
-
-        onMouseOver(x, y) {
-            this.terminals.forEach(terminal => {
-                terminal.focussed = (distance(x, y, terminal.x, terminal.y) < terminalRadius);
-            });
-            draw();
         }
 
         updateSignalPaths() {
-            this.blueSignalPath = this.findSignalPath(0);
-            this.greenSignalPath = this.findSignalPath(8);
+            const signalInputs = this.terminals.filter(terminal => [
+                EXTERNAL.MAIN_IN, EXTERNAL.RUBBERNECK_IN,
+            ].includes(terminal.externalConnection)).map(terminal => terminal.id);
+
+            this.signalPaths = signalInputs.map(input => this.findSignalPath(input));
         }
 
         findSignalPath(startTerminal) {
@@ -283,18 +145,346 @@ const switches = (() => {
                 }
             }
 
-            const path = findOutput(startTerminal, new Set());
-            if (path.length > 0) {
-                return [startTerminal].concat(path);
-            }
-            else {
-                return [];
-            }
+            return [startTerminal].concat(findOutput(startTerminal, new Set()));
         }
     }
 
-    function draw() {
-        _switch.draw();
+
+    /* Create a switch and wire it up. */
+    function createSingleSwitch() {
+        const sw = new FourPDTSwitch();
+
+        // Create an equivalent circuit by using different internal switches of the 4PDT switch.
+        // Just a convenience for trying to find the least messy arrangement for display. Not used in production.
+        function rewire(terminals, offset) {
+            function _offset(num) {
+                if (num < 4) return (num + offset) % 4;
+                if (num < 8) return ((num + offset) % 4) + 4;
+                return ((num + offset) % 4) + 8;
+            }
+
+            var rewired = new Array(12);
+            terminals.forEach(t => {
+                const originalId = t.id;
+                t.id = _offset(originalId);
+                t.permanentConnections = t.permanentConnections.map(connection => _offset(connection));
+                rewired[t.id] = t;
+            });
+
+            return rewired;
+        }
+
+        sw.terminals[10].externalConnection = EXTERNAL.MAIN_IN;
+        sw.terminals[11].externalConnection = EXTERNAL.MAIN_OUT;
+        sw.addPermanentConnection(0, 10);
+        sw.addPermanentConnection(4, 11);
+
+        sw.terminals[2].externalConnection = EXTERNAL.RUBBERNECK_IN;
+        sw.terminals[3].externalConnection = EXTERNAL.RUBBERNECK_OUT;
+        sw.addPermanentConnection(2, 9);
+        sw.addPermanentConnection(3, 5);
+
+        sw.terminals[6].externalConnection = EXTERNAL.FX_SEND;
+        sw.terminals[7].externalConnection = EXTERNAL.FX_RETURN;
+        sw.addPermanentConnection(6, 7);
+
+        // sw.terminals = rewire(sw.terminals, 1);
+
+        sw.toggle();
+
+        return sw;
+    }
+
+    return {
+        single: createSingleSwitch,
+    }
+})();
+
+
+const switch_renderer = (() => {
+
+    const TAU = Math.PI * 2;
+
+    const COLORS = {
+        LABEL: getCssVariable('--text-light-primary'),
+        EXTERNAL_TERMINAL: getCssVariable('--text-primary'),
+        EXTERNAL_CONNECTION: getCssVariable('--text-primary-invert'),
+        SWITCH_CONNECTION: getCssVariable('--text-secondary'),
+        GREY: getCssVariable('--grey'),
+        MAIN_IO: getCssVariable('--green'),
+        RUBBERNECK_IO: getCssVariable('--blue'),
+        FX_LOOP: getCssVariable('--red'),
+        OVERLAY: getCssVariable('--overlay'),
+    };
+
+    const TERMINAL_COLORS = {
+        'fx_send': COLORS.FX_LOOP,
+        'fx_return': COLORS.FX_LOOP,
+        'main_in': COLORS.MAIN_IO,
+        'main_out': COLORS.MAIN_IO,
+        'rubberneck_in': COLORS.RUBBERNECK_IO,
+        'rubberneck_out': COLORS.RUBBERNECK_IO,
+        'default': COLORS.GREY,
+    };
+
+    const maxHeight = 600;
+    const canvasRatio = 4/5;
+    var canvasWidth = 400;
+    var canvasHeight = 320;
+
+    var terminalSpacing = canvasWidth / 5;
+    var terminalRadius = terminalSpacing / 4;
+    var lineWidth = terminalRadius / 5;
+    var arrowSize = lineWidth * 3;
+
+    var fontSize = terminalRadius;
+
+    const ctx = canvas.getContext("2d");
+    ctx.lineWidth = lineWidth;
+    ctx.font = `${fontSize}px sans-serif`;
+
+    function rescale() {
+        canvasWidth = canvas.clientWidth;
+        canvasHeight = canvas.clientHeight;
+        terminalSpacing = canvasWidth / 5;
+        terminalRadius = terminalSpacing / 4;
+        lineWidth = terminalRadius / 5;
+        arrowSize = lineWidth * 3;
+        fontSize = terminalRadius;
+    }
+
+    class TerminalRenderer {
+        constructor(terminal, x, y) {
+            this.terminal = terminal;
+            this._x = x;
+            this._y = y;
+            this.color = COLORS.GREY;
+            this.focussed = false; // Mouse hovering over
+            this.rescale();
+        }
+
+        rescale() {
+            this.x = this.measuredX();
+            this.y = this.measuredY();
+        }
+
+        measuredX() {
+            return this._x * terminalSpacing + terminalSpacing;
+        }
+
+        measuredY() {
+            return this._y * terminalSpacing + terminalSpacing;
+        }
+    }
+
+    class FourPDTSwitchRenderer {
+        constructor(fourpdtswitch) {
+            this.renderLayers = [
+                RENDER_LAYERS.TERMINALS,
+                RENDER_LAYERS.EXTERNAL_WIRES,
+                RENDER_LAYERS.SWITCH,
+                RENDER_LAYERS.INTERNAL_WIRES,
+                RENDER_LAYERS.SIGNAL,
+                RENDER_LAYERS.TERMINAL_LABELS,
+                RENDER_LAYERS.CONNECTION_LABELS,
+            ];
+
+            this.switch = fourpdtswitch;
+            this.terminals = this.switch.terminals.map(terminal => {
+                const trenderer = new TerminalRenderer(
+                    terminal,
+                    (terminal.id % 4),
+                    Math.floor(terminal.id / 4)
+                );
+                return trenderer;
+            });
+        }
+
+        applyTerminalColors() {
+            this.switch.terminals.forEach(terminal => {
+                if (terminal.externalConnection in TERMINAL_COLORS) {
+                    this.terminals[terminal.id].color = TERMINAL_COLORS[terminal.externalConnection];
+                }
+                // else {
+                //     this.terminals[terminal.id].color = TERMINAL_COLORS['default'];
+                // }
+            });
+        }
+
+        rescale() {
+            this.terminals.forEach(t => t.rescale());
+        }
+
+        draw() {
+            this.applyTerminalColors();
+            if (this.shouldRender(RENDER_LAYERS.SIGNAL) || this.shouldRender(RENDER_LAYERS.INTERNAL_WIRES)) {
+                this.switch.signalPaths.forEach(path => {
+                    const first = path[0];
+                    const color = TERMINAL_COLORS[this.switch.terminals[first].externalConnection];
+
+                    path.forEach(t => this.terminals[t].color = color);
+                });
+            }
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            if (this.shouldRender(RENDER_LAYERS.SWITCH)) {
+                this.drawSwitchConnections();
+            }
+
+            if (this.shouldRender(RENDER_LAYERS.EXTERNAL_WIRES)) {
+                this.drawExternalConnections();
+            }
+
+            if (this.shouldRender(RENDER_LAYERS.INTERNAL_WIRES)) {
+                this.drawConnections();
+            }
+
+            if (this.shouldRender(RENDER_LAYERS.SIGNAL)) {
+                this.drawSignal();
+            }
+
+            if (this.shouldRender(RENDER_LAYERS.TERMINALS)) {
+                this.drawTerminals();
+            }
+
+            if (this.shouldRender(RENDER_LAYERS.TERMINAL_LABELS)) {
+                this.drawTerminalLabels();
+            }
+        }
+
+        shouldRender(layer) {
+            return this.renderLayers.includes(layer);
+        }
+
+        drawTerminals() {
+            this.terminals.forEach(renderer => {
+                if (renderer.terminal.externalConnection != null) {
+                    ctx.save();
+                    ctx.globalAlpha = .5;
+                    ctx.lineWidth = lineWidth * 2;
+                    strokeCircle(renderer.x, renderer.y, terminalRadius, TERMINAL_COLORS[renderer.terminal.externalConnection]);
+                    ctx.lineWidth = lineWidth;
+                    ctx.restore();
+                }
+
+                fillCircle(renderer.x, renderer.y, terminalRadius, renderer.color);
+            });
+        }
+
+        drawConnections() {
+            if (this.renderLayers.includes(RENDER_LAYERS.SIGNAL)) {
+                // Fade wired connections to make signals stand out more.
+                ctx.save();
+                ctx.globalAlpha = .1;
+            }
+            this.terminals.forEach(renderer => {
+                // Don't render line that goes through fx loop.
+                if ([
+                    EXTERNAL.FX_SEND,
+                    EXTERNAL.FX_RETURN,
+                ].includes(renderer.terminal.externalConnection)) {
+                    return;
+                }
+
+                const permanentConnections = renderer.terminal.permanentConnections;
+                permanentConnections.forEach(connection => {
+                    const other = this.terminals[connection];
+                    drawLine(...indentLine(renderer.x, renderer.y, other.x, other.y), renderer.color);
+                });
+            });
+            if (this.renderLayers.includes(RENDER_LAYERS.SIGNAL)) {
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        drawSwitchConnections() {
+            this.terminals.forEach(renderer => {
+                renderer.terminal.temporaryConnections.forEach(connection => {
+                    const other = this.terminals[connection];
+                    drawLine(...indentLine(renderer.x, renderer.y, other.x, other.y), COLORS.SWITCH_CONNECTION);
+                });
+            });
+        }
+
+        drawTerminalLabels() {
+            this.terminals.forEach(renderer => {
+                const metrics = ctx.measureText(renderer.terminal.label);
+                const left = renderer.x - (metrics.width / 2);
+                const baseline = renderer.y + (fontSize / 3);
+
+                ctx.strokeStyle = COLORS.OVERLAY;
+                ctx.strokeText(renderer.terminal.label, left, baseline);
+
+                ctx.fillStyle = COLORS.LABEL;
+                ctx.fillText(renderer.terminal.label, left, baseline);
+            });
+        }
+
+        drawExternalConnections() {
+            this.terminals.forEach(renderer => {
+                const ext = renderer.terminal.externalConnection;
+                switch(ext) {
+                    case null:
+                        break;
+                    case EXTERNAL.RUBBERNECK_IN:
+                    case EXTERNAL.MAIN_IN:
+                    case EXTERNAL.FX_SEND:
+                        drawArrowWithOutline(...indentLine(renderer.x - terminalRadius, renderer.y, renderer.x - terminalRadius * 2, renderer.y + terminalRadius), COLORS.EXTERNAL_CONNECTION);
+                        break;
+                    case EXTERNAL.RUBBERNECK_OUT:
+                    case EXTERNAL.MAIN_OUT:
+                    case EXTERNAL.FX_RETURN:
+                        drawArrowWithOutline(...indentLine(renderer.x + terminalRadius * 2, renderer.y + terminalRadius, renderer.x + terminalRadius, renderer.y), COLORS.EXTERNAL_CONNECTION);
+                        break;
+                }
+            });
+        }
+
+        drawSignal() {
+            this.switch.signalPaths.forEach(path => {
+                const color = this.terminals[path[0]].color;
+                const pairs = pairwise(path);
+                pairs.forEach(pair => {
+                    const first = this.terminals[pair[0]];
+                    const second = this.terminals[pair[1]];
+                    const between = this.lineBetween(first, second);
+                    drawArrowWithOutline(...between, color);
+                });
+            });
+        }
+
+        // Get start/end points for a line between two terminals, without drawing on top of those terminals
+        lineBetween(t1, t2) {
+            return indentLine(t1.x, t1.y, t2.x, t2.y);
+        }
+
+        onMouseOver(x, y) {
+            this.terminals.forEach(renderer => {
+                renderer.focussed = (distance(x, y, renderer.x, renderer.y) < terminalRadius);
+                if (renderer.focussed) {
+                    this.showTerminalInfo(renderer.terminal);
+                }
+            });
+            this.draw();
+        }
+
+        showTerminalInfo(terminal) {
+            var message = `<h3>Pin ${terminal.label}</h3>`;
+            if (terminal.externalConnection != null) {
+                message = `${message}${EXTERNAL_ABOUT[terminal.externalConnection]}<br/>`;
+            }
+
+            const connections = terminal.permanentConnections.map(c => this.terminals[c].terminal.label);
+            if (connections.length > 0) {
+                message = `${message}Wired connection to ${connections.join(', ')}.`;
+            }
+            else {
+                message = `${message}No wired connections.`;
+            }
+            infoLabel.innerHTML = message;
+        }
     }
 
     function drawLine(startX, startY, endX, endY, color) {
@@ -309,9 +499,12 @@ const switches = (() => {
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
-        ctx.fillStyle = COLORS.OVERLAY;
-        ctx.fill();
+        ctx.fillStyle = ctx.strokeStyle = COLORS.OVERLAY;
+        ctx.lineWidth = lineWidth * 2;
+        ctx.stroke();
 
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
         plotArrowHead(startX, startY, endX, endY);
         ctx.strokeStyle = COLORS.OVERLAY;
         ctx.stroke();
@@ -320,10 +513,7 @@ const switches = (() => {
     }
 
     function plotArrowHead(startX, startY, endX, endY) {
-        const arrowSize = lineWidth * 5;
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const angle = Math.atan2(dy, dx);
+        const angle = gradientOf(startX, startY, endX, endY);
 
         ctx.beginPath();
         ctx.moveTo(endX, endY);
@@ -346,10 +536,9 @@ const switches = (() => {
 
         plotArrowHead(startX, startY, endX, endY);
 
-        ctx.strokeStyle = COLORS.OVERLAY;
         ctx.fill();
 
-        drawLine(startX, startY, endX, endY, color);
+        drawLine(...indentLine(startX, startY, endX, endY, 0, arrowSize * .5), color);
     }
 
     function strokeCircle(x, y, radius, strokeStyle) {
@@ -366,16 +555,24 @@ const switches = (() => {
         ctx.fill();
     }
 
-    function toggle() {
-        _switch.toggle();
+    function drawCurve(startX, startY, endX, endY, color) {
+        // returns an array of x,y coordinates to graph a perfect curve between 2 points.
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+
+        for (var t = 0.0; t <= 1; t += .01) {
+            ctx.lineTo(
+                Math.round((1 - t) * (1 - t) * startX + 2 * (1 - t) * t * startX + t * t * endX),
+                Math.round((1 - t) * (1 - t) * startY + 2 * (1 - t) * t * endY + t * t * endY)
+            );
+        }
+
+        ctx.strokeStyle = color;
+        ctx.stroke();
     }
 
-    function onMouseOver(event) {
-        const rect = canvas.getBoundingClientRect();
-        _switch.onMouseOver(
-            event.clientX - rect.left,
-            event.clientY - rect.top
-        );
+    function getCssVariable(key) {
+        return getComputedStyle(document.documentElement).getPropertyValue(key);
     }
 
     function distance(x1, y1, x2, y2) {
@@ -384,63 +581,119 @@ const switches = (() => {
         )
     }
 
-    function pairwise(list) {
-        var output = [];
-        for (var i = 0; i < list.length - 1; i++) {
-            output.push([list[i], list[i + 1]]);
+    function gradientOf(startX, startY, endX, endY) {
+        const dx = endX - startX;
+        const dy = endY - startY;
+        return  Math.atan2(dy, dx);
+    }
+
+    // Return start/end points for a shorter line with the same gradient
+    function indentLine(startX, startY, endX, endY, startIndent, endIndent) {
+        if (startIndent == null) startIndent = terminalRadius * 1.2;
+        if (endIndent == null) endIndent = terminalRadius * 1.2;
+        const d = distance(startX, startY, endX, endY)
+        const startD2 = d - startIndent;
+        const startT = startD2 / d;
+        const endD2 = d - endIndent;
+        const endT = endD2 / d;
+
+        return [
+            startT * startX + (1 - startT) * endX,
+            startT * startY + (1 - startT) * endY,
+            (1 - endT) * startX + endT * endX,
+            (1 - endT) * startY + endT * endY,
+        ]
+    }
+
+    return {
+        renderer: FourPDTSwitchRenderer,
+        rescale: rescale,
+    }
+})();
+
+const singleSwitch = (() => {
+    const singleSwitch = switch_models.single();
+    const renderer = new switch_renderer.renderer(singleSwitch);
+
+    function toggle() {
+        singleSwitch.toggle();
+        renderer.draw();
+    }
+
+    function rescale() {
+        switch_renderer.rescale();
+        renderer.rescale();
+        renderer.draw();
+    }
+
+    function onMouseOver(event) {
+        const rect = canvas.getBoundingClientRect();
+        renderer.onMouseOver(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+    }
+
+    function toggleLayer(layer) {
+        if (renderer.renderLayers.includes(layer)) {
+            renderer.renderLayers = renderer.renderLayers.filter(item => item != layer);
         }
-        return output;
+        else {
+            renderer.renderLayers.push(layer);
+        }
     }
 
-    function getCssVariable(key) {
-        return getComputedStyle(document.documentElement).getPropertyValue(key);
+    function showLayer(layer) {
+        if (!renderer.renderLayers.includes(layer)) {
+            renderer.renderLayers.push(layer);
+        }
     }
 
-    function createSingleSwitch() {
-        const sw = new FourPDTSwitch();
-        sw.setColor([1, 5, 8, 11], COLORS.GREEN);
-        sw.setColor([0, 3, 6, 10], COLORS.BLUE);
-        sw.setColor([4, 7], COLORS.RED);
-
-        // Green
-        sw.addPermanentConnection(1, 8);
-        sw.addPermanentConnection(5, 11);
-
-        // Blue
-        sw.addPermanentConnection(0, 10);
-        sw.addPermanentConnection(3, 6);
-
-        // Red
-        sw.addPermanentConnection(4, 7);
-
-        // External connections
-        sw.terminals[8].externalConnection = EXTERNAL.MAIN_IN;
-        sw.terminals[11].externalConnection = EXTERNAL.MAIN_OUT;
-
-        sw.terminals[0].externalConnection = EXTERNAL.RUBBERNECK_IN;
-        sw.terminals[3].externalConnection = EXTERNAL.RUBBERNECK_OUT;
-
-        sw.terminals[4].externalConnection = EXTERNAL.FX_SEND;
-        sw.terminals[7].externalConnection = EXTERNAL.FX_RETURN;
-
-        sw.updateSignalPaths();
-
-        return sw;
+    function hideLayer(layer) {
+        if (renderer.renderLayers.includes(layer)) {
+            renderer.renderLayers = renderer.renderLayers.filter(item => item != layer);
+        }
     }
 
-    // Run on load
-    const _switch = createSingleSwitch();
+    function showSignalPath() {
+        showLayer(RENDER_LAYERS.SIGNAL);
+        showLayer(RENDER_LAYERS.INTERNAL_WIRES);
+        showLayer(RENDER_LAYERS.SWITCH);
+        renderer.draw();
+    }
 
+    function showWiredConnections() {
+        showLayer(RENDER_LAYERS.INTERNAL_WIRES);
+        showLayer(RENDER_LAYERS.SWITCH);
+        hideLayer(RENDER_LAYERS.SIGNAL);
+        renderer.draw();
+    }
 
-    // document.getElementById('fourpdt_toggle').addEventListener('click', toggle);
-    // canvas.addEventListener('mousemove', onMouseOver);
+    function showTerminals() {
+        hideLayer(RENDER_LAYERS.INTERNAL_WIRES);
+        hideLayer(RENDER_LAYERS.SWITCH);
+        hideLayer(RENDER_LAYERS.SIGNAL);
+        renderer.draw();
+    }
+
+    document.getElementById('single_switch_show_signal_path').addEventListener('click', showSignalPath);
+    document.getElementById('single_switch_show_wires').addEventListener('click', showWiredConnections);
+    document.getElementById('single_switch_show_terminals').addEventListener('click', showTerminals);
+    document.getElementById('single_switch_toggle_switch').addEventListener('click', toggle);
+
+    canvas.addEventListener('mousemove', onMouseOver);
     canvas.addEventListener('click', toggle);
+    window.addEventListener('resize', rescale);
 
+    rescale();
     toggle();
 
-    // Exports
-    return {
-        draw: draw,
-        toggle: toggle,
-    }
+    return renderer;
+})();
+
+
+return {
+    singleSwitch: singleSwitch,
+}
+
 })();
