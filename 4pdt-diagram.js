@@ -119,6 +119,8 @@ const fourpdt = (() => {
 
             this.terminals[4].externalConnection = EXTERNAL_CONNECTIONS.FX_SEND;
             this.terminals[7].externalConnection = EXTERNAL_CONNECTIONS.FX_RETURN;
+
+            this.updateSignalPaths();
         }
 
         addTemporaryConnection(first, second) {
@@ -147,6 +149,7 @@ const fourpdt = (() => {
                 });
             }
 
+            this.updateSignalPaths();
             this.draw();
         }
 
@@ -171,12 +174,12 @@ const fourpdt = (() => {
                 this.drawConnections();
             }
 
-            if (this.shouldRender(RENDER_LAYERS.TERMINAL_LABELS)) {
-                this.drawTerminalLabels();
-            }
-
             if (this.shouldRender(RENDER_LAYERS.SIGNAL)) {
                 this.drawSignal();
+            }
+
+            if (this.shouldRender(RENDER_LAYERS.TERMINAL_LABELS)) {
+                this.drawTerminalLabels();
             }
         }
 
@@ -191,9 +194,9 @@ const fourpdt = (() => {
                     strokeCircle(terminal.x, terminal.y, terminalRadius, COLORS.EXTERNAL_CONNECTION);
                     ctx.lineWidth = lineWidth;
                 }
-    
+
                 fillCircle(terminal.x, terminal.y, terminalRadius, terminal.color);
-    
+
                 if (terminal.focussed) {
                     fillCircle(terminal.x, terminal.y, terminalRadius / 3, COLORS.LABEL);
                 }
@@ -222,7 +225,7 @@ const fourpdt = (() => {
                     const other = this.terminals[connection];
                     drawLine(terminal.x, terminal.y, other.x, other.y, COLORS.SWITCH_CONNECTION);
                 });
-            });            
+            });
         }
 
         drawTerminalLabels() {
@@ -239,6 +242,34 @@ const fourpdt = (() => {
         }
 
         drawSignal() {
+            const greenPairs = pairwise(this.greenSignalPath);
+            greenPairs.forEach(pair => {
+                const first = this.terminals[pair[0]];
+                const second = this.terminals[pair[1]];
+                drawArrowWithOutline(first.x, first.y, second.x, second.y, COLORS.SIGNAL_GREEN);
+            });
+
+            const bluePairs = pairwise(this.blueSignalPath);
+            bluePairs.forEach(pair => {
+                const first = this.terminals[pair[0]];
+                const second = this.terminals[pair[1]];
+                drawArrowWithOutline(first.x, first.y, second.x, second.y, COLORS.SIGNAL_BLUE);
+            });
+        }
+
+        onMouseOver(x, y) {
+            this.terminals.forEach(terminal => {
+                terminal.focussed = (distance(x, y, terminal.x, terminal.y) < terminalRadius);
+            });
+            draw();
+        }
+
+        updateSignalPaths() {
+            this.blueSignalPath = this.findSignalPath(0);
+            this.greenSignalPath = this.findSignalPath(8);
+        }
+
+        findSignalPath(startTerminal) {
             const _this = this;
             const signalOutputs = [3, 11];
 
@@ -273,48 +304,12 @@ const fourpdt = (() => {
                 }
             }
 
-            function pairwise(list) {
-                var output = [];
-                console.log(list.length);
-                for (var i = 0; i < list.length - 1; i++) {
-                    output.push([list[i], list[i + 1]]);
-                }
-                return output;
-            }
-
-            // green path
-            const greenPath = [0].concat(findOutput(0, new Set()));
-            const bluePath = [8].concat(findOutput(8, new Set()));
-
-            const greenPairs = pairwise(greenPath);
-            greenPairs.forEach(pair => {
-                const first = _this.terminals[pair[0]];
-                const second = _this.terminals[pair[1]];
-                drawArrow(first.x, first.y, second.x, second.y, COLORS.GREEN);
-            });
-
-            const bluePairs = pairwise(bluePath);
-            bluePairs.forEach(pair => {
-                const first = _this.terminals[pair[0]];
-                const second = _this.terminals[pair[1]];
-                drawArrow(first.x, first.y, second.x, second.y, COLORS.BLUE);
-            });
-        }
-
-        onMouseOver(x, y) {
-            this.terminals.forEach(terminal => {
-                terminal.focussed = (distance(x, y, terminal.x, terminal.y) < terminalRadius);
-            });
-            draw();
+            return [startTerminal].concat(findOutput(startTerminal, new Set()));
         }
     }
 
     function draw() {
         _switch.draw();
-    }
-
-    function showSignalPath() {
-        // TODO
     }
 
     function drawLine(startX, startY, endX, endY, color) {
@@ -325,14 +320,21 @@ const fourpdt = (() => {
         ctx.stroke();
     }
 
-    function drawArrow(startX, startY, endX, endY, color) {
-        if (color != null) {
-            ctx.strokeStyle = '#ffffffff';
-            ctx.fillStyle = '#ffffffff';
-        }
+    function drawArrowWithOutline(startX, startY, endX, endY, color) {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.fillStyle = COLORS.OVERLAY;
+        ctx.fill();
 
-        drawLine(startX, startY, endX, endY);
+        plotArrowHead(startX, startY, endX, endY);
+        ctx.strokeStyle = COLORS.OVERLAY;
+        ctx.stroke();
 
+        drawArrow(startX, startY, endX, endY, color);
+    }
+
+    function plotArrowHead(startX, startY, endX, endY) {
         const arrowSize = lineWidth * 5;
         const dx = endX - startX;
         const dy = endY - startY;
@@ -349,9 +351,20 @@ const fourpdt = (() => {
             endY - arrowSize * Math.sin(angle + Math.PI / 6)
         );
         ctx.closePath();
+    }
+
+    function drawArrow(startX, startY, endX, endY, color) {
+        if (color != null) {
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+        }
+
+        plotArrowHead(startX, startY, endX, endY);
+
         ctx.strokeStyle = COLORS.OVERLAY;
-        ctx.stroke();
         ctx.fill();
+
+        drawLine(startX, startY, endX, endY, color);
     }
 
     function strokeCircle(x, y, radius, strokeStyle) {
@@ -384,6 +397,15 @@ const fourpdt = (() => {
         return Math.sqrt(
             Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)
         )
+    }
+
+    function pairwise(list) {
+        var output = [];
+        console.log(list.length);
+        for (var i = 0; i < list.length - 1; i++) {
+            output.push([list[i], list[i + 1]]);
+        }
+        return output;
     }
 
     function getCssVariable(key) {
