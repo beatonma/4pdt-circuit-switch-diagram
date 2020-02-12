@@ -1,12 +1,13 @@
-const fourpdt = (() => {
+const switches = (() => {
 
-    const EXTERNAL_CONNECTIONS = {
+    // External connections to jacks
+    const EXTERNAL = {
         FX_SEND: 'fx_send',
         FX_RETURN: 'fx_return',
         MAIN_IN: 'main_in',
         MAIN_OUT: 'main_out',
-        RUBBERNECK_IN: 'rubberneck_in',
-        RUBBERNECK_OUT: 'rubberneck_out',
+        RUBBERNECK_IN: 'rubberneck_in', // Send from Rubberneck
+        RUBBERNECK_OUT: 'rubberneck_out', // Return to Rubberneck
     };
 
     const RENDER_LAYERS = {
@@ -51,14 +52,15 @@ const fourpdt = (() => {
     };
 
     class Terminal {
-        constructor(x, y) {
+        constructor(x, y, id) {
             this.x = x;
             this.y = y;
             this.temporaryConnections = []; // Volatile connections made by flicking the switch
             this.permanentConnections = []; // Soldered wire connections
             this.color = COLORS.GREY;
             this.externalConnection = null;
-            this.label = '';
+            this.id = id;
+            this.label = `${id}`;
             this.focussed = false; // Mouse hovering over
         }
 
@@ -85,42 +87,15 @@ const fourpdt = (() => {
             this.switchPosition = false;
 
             this.terminals = [];
-            for (var i = 0; i < 12; i++) {
+            for (var id = 0; id < 12; id++) {
                 this.terminals.push(
                     new Terminal(
-                        (i % 4) * terminalSpacing + terminalSpacing,
-                        Math.floor(i / 4) * terminalSpacing + terminalSpacing)
-                    );
-
-                this.terminals[i].label = `${i}`;
+                        (id % 4) * terminalSpacing + terminalSpacing,
+                        Math.floor(id / 4) * terminalSpacing + terminalSpacing,
+                        id,
+                    )
+                );
             }
-
-            this.setColor([1, 5, 8, 11], COLORS.GREEN);
-            this.setColor([0, 3, 6, 10], COLORS.BLUE);
-            this.setColor([4, 7], COLORS.RED);
-
-            // Green
-            this.addPermanentConnection(1, 8);
-            this.addPermanentConnection(5, 11);
-
-            // Blue
-            this.addPermanentConnection(0, 10);
-            this.addPermanentConnection(3, 6);
-
-            // Red
-            this.addPermanentConnection(4, 7);
-
-            // External connections
-            this.terminals[8].externalConnection = EXTERNAL_CONNECTIONS.MAIN_IN;
-            this.terminals[11].externalConnection = EXTERNAL_CONNECTIONS.MAIN_OUT;
-
-            this.terminals[0].externalConnection = EXTERNAL_CONNECTIONS.RUBBERNECK_IN;
-            this.terminals[3].externalConnection = EXTERNAL_CONNECTIONS.RUBBERNECK_OUT;
-
-            this.terminals[4].externalConnection = EXTERNAL_CONNECTIONS.FX_SEND;
-            this.terminals[7].externalConnection = EXTERNAL_CONNECTIONS.FX_RETURN;
-
-            this.updateSignalPaths();
         }
 
         addTemporaryConnection(first, second) {
@@ -205,8 +180,10 @@ const fourpdt = (() => {
 
         drawConnections() {
             this.terminals.forEach(terminal => {
+                // Don't render line that goes through fx loop.
                 if ([
-                    EXTERNAL_CONNECTIONS.FX_SEND, EXTERNAL_CONNECTIONS.FX_RETURN
+                    EXTERNAL.FX_SEND,
+                    EXTERNAL.FX_RETURN,
                 ].includes(terminal.externalConnection)) {
                     return;
                 }
@@ -271,7 +248,9 @@ const fourpdt = (() => {
 
         findSignalPath(startTerminal) {
             const _this = this;
-            const signalOutputs = [3, 11];
+            const signalOutputs = this.terminals.filter(terminal => [
+                EXTERNAL.MAIN_OUT, EXTERNAL.RUBBERNECK_OUT,
+            ].includes(terminal.externalConnection)).map(terminal => terminal.id);
 
             function findOutput(terminalId, visitedTerminals) {
                 if (visitedTerminals.has(terminalId)) {
@@ -304,7 +283,13 @@ const fourpdt = (() => {
                 }
             }
 
-            return [startTerminal].concat(findOutput(startTerminal, new Set()));
+            const path = findOutput(startTerminal, new Set());
+            if (path.length > 0) {
+                return [startTerminal].concat(path);
+            }
+            else {
+                return [];
+            }
         }
     }
 
@@ -401,7 +386,6 @@ const fourpdt = (() => {
 
     function pairwise(list) {
         var output = [];
-        console.log(list.length);
         for (var i = 0; i < list.length - 1; i++) {
             output.push([list[i], list[i + 1]]);
         }
@@ -412,11 +396,45 @@ const fourpdt = (() => {
         return getComputedStyle(document.documentElement).getPropertyValue(key);
     }
 
-    // Run on load
-    const _switch = new FourPDTSwitch();
+    function createSingleSwitch() {
+        const sw = new FourPDTSwitch();
+        sw.setColor([1, 5, 8, 11], COLORS.GREEN);
+        sw.setColor([0, 3, 6, 10], COLORS.BLUE);
+        sw.setColor([4, 7], COLORS.RED);
 
-    document.getElementById('fourpdt_toggle').addEventListener('click', toggle);
+        // Green
+        sw.addPermanentConnection(1, 8);
+        sw.addPermanentConnection(5, 11);
+
+        // Blue
+        sw.addPermanentConnection(0, 10);
+        sw.addPermanentConnection(3, 6);
+
+        // Red
+        sw.addPermanentConnection(4, 7);
+
+        // External connections
+        sw.terminals[8].externalConnection = EXTERNAL.MAIN_IN;
+        sw.terminals[11].externalConnection = EXTERNAL.MAIN_OUT;
+
+        sw.terminals[0].externalConnection = EXTERNAL.RUBBERNECK_IN;
+        sw.terminals[3].externalConnection = EXTERNAL.RUBBERNECK_OUT;
+
+        sw.terminals[4].externalConnection = EXTERNAL.FX_SEND;
+        sw.terminals[7].externalConnection = EXTERNAL.FX_RETURN;
+
+        sw.updateSignalPaths();
+
+        return sw;
+    }
+
+    // Run on load
+    const _switch = createSingleSwitch();
+
+
+    // document.getElementById('fourpdt_toggle').addEventListener('click', toggle);
     // canvas.addEventListener('mousemove', onMouseOver);
+    canvas.addEventListener('click', toggle);
 
     toggle();
 
