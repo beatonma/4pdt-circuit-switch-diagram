@@ -2,15 +2,15 @@
 <head>
     <style>
         :root {
-            --width: 800px;
-            --height: 600px;
+            /* --width: 800px;
+            --height: 600px; */
 
             --green: #16b06bff;
             --blue: #0e70b8ff;
             --red: #ee4545ff;
             --grey: #636363ff;
-            --bright-green: #00ff00ff;
-            --bright-blue: #0000ffff;
+            --bright-green: #00ff8dff;
+            --bright-blue: #0093ffff;
 
             --text-light-primary: hsla(0,0%,100%,.83);
             --text-light-secondary: hsla(0,0%,100%,.54);
@@ -24,7 +24,7 @@
             --text-primary-invert: var(--text-light-primary);
             --text-secondary-invert: var(--text-light-secondary);
             --text-tertiary-invert: var(--text-light-tertiary);
-            --overlay: var(--text-dark-tertiary);
+            --overlay: var(--text-dark-secondary);
             --primary-color: var(--text-primary);
             --item-primary: var(--primary-color);
         }
@@ -35,12 +35,18 @@
         section {
             margin-top: 64px;
         }
-        #fourpdt_diagram {
-            width: var(--width);
-            height: var(--height);
+
+        #single_switch_controls {
+            display: flex;
+            flex-direction: row;
         }
-        #fourpdt_diagram_canvas {
-            background-color: #333333;;
+        canvas {
+            width: 400px;
+            height: 320px;
+            max-width: 400px;
+            max-height: 320px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .row {
             width: var(--width);
@@ -54,28 +60,32 @@
             height: 32px;
             background-color: green;
         }
-        .button {
+        .switch-control-button {
             background: var(--text-primary);
             color: var(--text-primary-invert);
             padding: 8px 12px;
             width: max-content;
+            margin-right: 6px;
+            cursor: default;
         }
     </style>
 </head>
 <body>
-    <div id="fourpdt_diagram">
-        <div>
-            <canvas id="fourpdt_diagram_canvas" width="800" height="600"></canvas>
+    <div id="single_switch_canvas_wrapper" class="canvas-wrapper">
+        <canvas id="single_switch_canvas" width="400" height="320"></canvas>
+        <div id="single_switch_label"></div>
+        <div id="single_switch_controls">
+            <div id="single_switch_toggle_switch" class="switch-control-button">Toggle switch</div>
+            <div id="single_switch_show_signal_path" class="switch-control-button">Show signal path</div>
+            <div id="single_switch_show_wires" class="switch-control-button">Show connections</div>
+            <div id="single_switch_show_terminals" class="switch-control-button">Terminals only</div>
         </div>
-        <div id="fourpdt_toggle" class="button">Toggle switch</div>
-        <div id="fourpdt_toggle_show_green_signal" class="button">Show/hide green signal path</div>
-        <div id="fourpdt_toggle_show_blue_signal" class="button">Show/hide blue signal path</div>
     </div>
 
-    <section>
+    <!-- <section>
         <div id="key">
             <ul>
-                
+
             </ul>
         </div>
         <div>
@@ -85,7 +95,7 @@
 
             <p>When you're done there should only be two terminals on the switch that are not connected to anything.</p>
         </div>
-    </section>
+    </section> -->
 
 
     <script src="4pdt-diagram.js" type="text/javascript" ></script>
