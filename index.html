@@ -1,106 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#111111">
-<head>
-    <style>
-:root {
-    --green: #16b06bff;
-    --blue: #0e70b8ff;
-    --red: #ee4545ff;
-    --grey: #636363ff;
-    --white: #ffffffff;
-    --black: #000000ff;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <title>4PDT switch</title>
+  <style>
+    :root {
+      --green: #16b06bff;
+      --blue: #0e70b8ff;
+      --red: #ee4545ff;
+      --grey: #636363ff;
+      --white: #ffffffff;
+      --black: #000000ff;
 
-    --text-light-primary: hsla(0,0%,100%,.83);
-    --text-light-secondary: rgba(150, 83, 83, 0.54);
-    --text-light-tertiary: hsla(0,0%,100%,.25);
-    --text-dark-primary: rgba(0,0,0,.83);
-    --text-dark-secondary: rgba(0,0,0,.54);
-    --text-dark-tertiary: rgba(0,0,0,.25);
-    --text-primary: var(--text-dark-primary);
-    --text-secondary: var(--text-dark-secondary);
-    --text-tertiary: var(--text-dark-tertiary);
-    --text-primary-invert: var(--text-light-primary);
-    --text-secondary-invert: var(--text-light-secondary);
-    --text-tertiary-invert: var(--text-light-tertiary);
-    --overlay: var(--text-dark-secondary);
-    --primary-color: var(--text-primary);
-    --item-primary: var(--primary-color);
-}
-        body {
-            /* background-color: #111111; */
-            /* color: #eeeeee; */
-        }
-        section {
-            margin-top: 64px;
-        }
+      --text-light-primary: hsla(0, 0%, 100%, .83);
+      --text-light-secondary: rgba(150, 83, 83, 0.54);
+      --text-light-tertiary: hsla(0, 0%, 100%, .25);
+      --text-dark-primary: rgba(0, 0, 0, .83);
+      --text-dark-secondary: rgba(0, 0, 0, .54);
+      --text-dark-tertiary: rgba(0, 0, 0, .25);
+      --text-primary: var(--text-dark-primary);
+      --text-secondary: var(--text-dark-secondary);
+      --text-tertiary: var(--text-dark-tertiary);
+      --text-primary-invert: var(--text-light-primary);
+      --text-secondary-invert: var(--text-light-secondary);
+      --text-tertiary-invert: var(--text-light-tertiary);
+      --overlay: var(--text-dark-secondary);
+      --primary-color: var(--text-primary);
+      --item-primary: var(--primary-color);
+    }
 
-        #single_switch_controls {
-            display: flex;
-            flex-direction: row;
-        }
-        canvas {
-            width: 100%;
-            /* width: 400px;
-            height: 320px;
-            max-width: 400px;
-            max-height: 320px; */
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .row {
-            width: var(--width);
-            display: flex;
-            flex-direction: row;
-            justify-content: space-evenly;
-            margin-bottom:64px;
-        }
-        .terminal {
-            width: 32px;
-            height: 32px;
-            background-color: green;
-        }
-        .switch-control-button {
-            background: var(--text-primary);
-            color: var(--text-primary-invert);
-            padding: 8px 12px;
-            width: max-content;
-            margin-right: 6px;
-            cursor: default;
-        }
-    </style>
+    body {
+      background-color: #111111;
+      color: #eeeeee;
+    }
+
+    section {
+      margin-top: 64px;
+    }
+
+    figure {
+      max-width: 800px;
+      margin-inline: auto;
+    }
+
+    canvas {
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #controls, #controls fieldset {
+      display: flex;
+      flex-direction: row;
+      gap: 1ch;
+      align-items: baseline;
+      justify-content: center;
+      border-radius: 1ch;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+    }
+
+    .canvas-wrapper a {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      padding: 1ch;
+    }
+
+    label {
+      user-select: none;
+    }
+  </style>
 </head>
 <body>
-    <div id="single_switch_canvas_wrapper" class="canvas-wrapper">
-        <canvas id="single_switch_canvas" width="400" height="320"></canvas>
-        <p><div id="single_switch_label">Hover over a terminal for more information.</div></p>
-        <div id="single_switch_controls">
-            <div id="single_switch_show_terminals" class="switch-control-button">Terminals only</div>
-            <div id="single_switch_show_wires" class="switch-control-button">Show connections</div>
-            <div id="single_switch_show_signal_path" class="switch-control-button">Show signal path</div>
-            <div id="single_switch_toggle_switch" class="switch-control-button">Toggle switch</div>
-        </div>
+<figure aria-label="Simulated diagram of the 4PDT switch wiring and signal flow.">
+  <div class="canvas-wrapper">
+    <canvas id="js_4pdt_canvas" width="400" height="320"></canvas>
+    <a
+        href="https://github.com/beatonma/4pdt-circuit-switch-diagram"
+        aria-label="Diagram source on Github" title="Diagram source on Github"
+    >
+      Github
+    </a>
+  </div>
+
+  <div id="controls" aria-controls="js_4pdt_canvas">
+    <div>
+      <input type="checkbox" id="js_4pdt_toggle_switch" class="switch"/>
+      <label for="js_4pdt_toggle_switch">Switch state</label>
     </div>
 
-    <!-- <section>
-        <div id="key">
-            <ul>
+    <fieldset>
+      <legend>Detail:</legend>
+      <div>
+        <input type="radio" name="js_4pdt_mode" id="js_4pdt_show_signal_path" value="signal" checked/>
+        <label for="js_4pdt_show_signal_path">Show signal path</label>
+      </div>
+      <div>
+        <input type="radio" name="js_4pdt_mode" id="js_4pdt_show_wires" value="connections"/>
+        <label for="js_4pdt_show_wires">Show connections</label>
+      </div>
+      <div>
+        <input type="radio" name="js_4pdt_mode" id="js_4pdt_show_terminals" value="terminals"/>
+        <label for="js_4pdt_show_terminals">Terminals only</label>
+      </div>
+    </fieldset>
+  </div>
 
-            </ul>
-        </div>
-        <div>
-            <p>
-                Each of the six terminals outlined above need to be connected to the tip terminal of a jack socket. Connect the sleeve terminals of each socket pair to each other.
-            </p>
+  <blockquote id="js_4pdt_label">Hover over a terminal for more information.</blockquote>
 
-            <p>When you're done there should only be two terminals on the switch that are not connected to anything.</p>
-        </div>
-    </section> -->
+  <figcaption id="single_switch_key">
+    <h3>Key:</h3>
+    <ul>
+      <li>
+        Grey lines show the internal connections of the switch - you don't need to do anything about them but may help
+        you understand how the switch works.
+      </li>
+      <li>
+        The terminals with white arrows should each be wired to the tip terminal of an audio jack socket.
+      </li>
+      <li>
+        Blue and green lines represent wires to show which terminals you need to connect together.
+      </li>
+      <li>
+        Blue and green arrows represent the paths of audio signals travelling through the switch.
+      </li>
+    </ul>
+  </figcaption>
+</figure>
 
-
-    <script src="4pdt-diagram.js" type="text/javascript" ></script>
+<script src="4pdt-diagram.js" type="text/javascript"></script>
 </body>
 </html>
